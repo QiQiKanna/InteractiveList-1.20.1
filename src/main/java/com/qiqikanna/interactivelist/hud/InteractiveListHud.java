@@ -42,11 +42,21 @@ public class InteractiveListHud
         this.hudTexts.clear();
         for (int i = 0; i < hudTexts.size(); i++)
         {
-            if (i >= this.maxCellCount - 1)
+            if (i > this.maxCellCount - 1)
                 break;
 
             this.hudTexts.add(hudTexts.get(i));
         }
+    }
+
+    public void setMaxCellCount(int maxCellCount)
+    {
+        this.maxCellCount = maxCellCount;
+    }
+
+    public int getSelectIndex()
+    {
+        return this.selectedIndex;
     }
 
     public void selectNext()
@@ -61,27 +71,38 @@ public class InteractiveListHud
 
     public void render(DrawContext drawContext)
     {
+        if (this.client == null)
+            return;
+
         MatrixStack matrixStack = drawContext.getMatrices();
 
         for (int i = 0;i < this.hudTexts.size();i++)
         {
-            if (i >= this.maxCellCount - 1)
+            matrixStack.push();
+            matrixStack.translate(250.0,130.0,0.0);
+
+            if (i > this.maxCellCount - 1)
                 break;
 
+            //绘制单元格背景纹理
             RenderSystem.enableBlend();
             drawContext.drawTexture(
                     LIST_CELL_TEXTURE,
-                    250,130 + i*15,0,0,90,12,90,12);
+                    0, i * 15,0,0,90,12,90,12);
 
-            String text = (i == this.selectedIndex ? "F  " : "   ") + this.hudTexts.get(i);
+            String text = (i == this.selectedIndex ? ">  " : "   ") + this.hudTexts.get(i);
 
+            //绘制文本
             matrixStack.push();
+            matrixStack.translate(6.0,4.5,0.0);
             matrixStack.scale(0.5F,0.5F,0.5F);
             drawContext.drawText(this.client.textRenderer,
                     text,
-                    515,268 + i*30,
+                    0, i*30,
                     0xFFFFFFFF,
                     false);
+            matrixStack.pop();
+
             matrixStack.pop();
         }
 

@@ -16,6 +16,8 @@ public class ModKeyBindings
             InputUtil.Type.MOUSE,GLFW.GLFW_MOUSE_BUTTON_5,INTERACTIVE_LIST);
     public static final KeyBinding SWITCH_SCROLL = register("switch_scroll",
             GLFW.GLFW_KEY_LEFT_CONTROL,INTERACTIVE_LIST);
+    public static final KeyBinding INTERACT = register("interact",
+            GLFW.GLFW_KEY_F,INTERACTIVE_LIST);
 
 
     public static KeyBinding register(String name,int code,String category)
