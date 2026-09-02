@@ -16,7 +16,7 @@ public class InteractiveListHud
     private static final Identifier LIST_CELL_TEXTURE = InteractiveList.id("textures/ui/list_cell.png");
 
     private MinecraftClient client;
-    private final List<String> hudTexts = new ArrayList<>();
+    private final List<HudEntry> hudEntries = new ArrayList<>();
     private int maxCellCount;
     private int selectedIndex = 0;
 
@@ -37,36 +37,33 @@ public class InteractiveListHud
         this.client = client;
     }
 
-    public void setHudTexts(List<String> hudTexts)
+    public void setHudEntries(List<HudEntry> hudEntries)
     {
-        this.hudTexts.clear();
-        for (int i = 0; i < hudTexts.size(); i++)
+        this.hudEntries.clear();
+        for (int i = 0; i < hudEntries.size(); i++)
         {
-            if (i > this.maxCellCount - 1)
+            if (i >= this.maxCellCount)
                 break;
 
-            this.hudTexts.add(hudTexts.get(i));
+            this.hudEntries.add(hudEntries.get(i));
         }
     }
 
-    public void setMaxCellCount(int maxCellCount)
+    public HudEntry getSelectedEntry()
     {
-        this.maxCellCount = maxCellCount;
-    }
-
-    public int getSelectIndex()
-    {
-        return this.selectedIndex;
+        return this.hudEntries.get(this.selectedIndex);
     }
 
     public void selectNext()
     {
-        this.selectedIndex = (this.selectedIndex + 1) % this.hudTexts.size();
+        if (this.selectedIndex < this.hudEntries.size() - 1)
+            this.selectedIndex++;
     }
 
     public void selectPrevious()
     {
-        this.selectedIndex = (this.selectedIndex + this.hudTexts.size() -1) % this.hudTexts.size();
+        if (this.selectedIndex > 0)
+            this.selectedIndex--;
     }
 
     public void render(DrawContext drawContext)
@@ -74,9 +71,12 @@ public class InteractiveListHud
         if (this.client == null)
             return;
 
+        if (this.selectedIndex >= this.hudEntries.size())
+            this.selectedIndex = 0;
+
         MatrixStack matrixStack = drawContext.getMatrices();
 
-        for (int i = 0;i < this.hudTexts.size();i++)
+        for (int i = 0; i < this.hudEntries.size(); i++)
         {
             matrixStack.push();
             matrixStack.translate(250.0,130.0,0.0);
@@ -90,7 +90,7 @@ public class InteractiveListHud
                     LIST_CELL_TEXTURE,
                     0, i * 15,0,0,90,12,90,12);
 
-            String text = (i == this.selectedIndex ? ">  " : "   ") + this.hudTexts.get(i);
+            String text = (i == this.selectedIndex ? ">  " : "   ") + this.hudEntries.get(i).content;
 
             //绘制文本
             matrixStack.push();
@@ -105,7 +105,6 @@ public class InteractiveListHud
 
             matrixStack.pop();
         }
-
 
     }
 }

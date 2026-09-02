@@ -1,12 +1,14 @@
 package com.qiqikanna.interactivelist;
 
+import com.qiqikanna.interactivelist.hud.HudEntry;
 import com.qiqikanna.interactivelist.hud.InteractiveListHud;
 import com.qiqikanna.interactivelist.option.ModKeyBindings;
 import com.qiqikanna.interactivelist.util.BlockCollector;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.minecraft.text.Text;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -18,7 +20,6 @@ public class InteractiveListClient implements ClientModInitializer
 {
     private static int interactCooldown = 4;
 
-
     @Override
     public void onInitializeClient()
     {
@@ -29,30 +30,25 @@ public class InteractiveListClient implements ClientModInitializer
             if (interactCooldown > 0)
                 interactCooldown--;
 
-            List<BlockPos> blockPosList = BlockCollector.collectBlocksBFS(client,5);
-            if (client.player == null)
+            if (client.player == null || client.world == null || client.interactionManager == null)
                 return;
-            BlockPos playerBlockPos = client.player.getBlockPos();
-            blockPosList.sort((pos1,pos2) ->
+
+            List<HudEntry> entries = new ArrayList<>();
+            BlockCollector.collectBlocksBFS(client,client.interactionManager.getReachDistance())
+                    .forEach(blockPos ->
+                        entries.add(new HudEntry(client,blockPos))
+                    );
+            client.world.getEntities().forEach(entity ->
             {
-                double distance1 = playerBlockPos.getSquaredDistance(pos1);
-                double distance2 = playerBlockPos.getSquaredDistance(pos2);
-                return  (int)(distance1 - distance2);
+                if (entity.distanceTo(client.player) <= client.interactionManager.getReachDistance() && !(entity instanceof PlayerEntity))
+                    entries.add(new HudEntry(client,entity));
             });
-            List<String> blockNameList = new ArrayList<>();
-            blockPosList.forEach(blockPos ->
-            {
-                if (client.world == null)
-                    return;
-                blockNameList.add(
-                        Text.translatable(client.world.getBlockState(blockPos).getBlock().getTranslationKey())
-                                .getString()
-                );
-            });
+            entries.sort((e1,e2)-> (int) (e1.distance - e2.distance));
 
             InteractiveListHud hud = InteractiveListHud.getInstance();
             hud.setClient(client);
-            hud.setHudTexts(blockNameList);
+            hud.setHudEntries(entries);
+
 
             while (ModKeyBindings.SELECT_NEXT.wasPressed())
             {
@@ -66,15 +62,26 @@ public class InteractiveListClient implements ClientModInitializer
 
             while (ModKeyBindings.INTERACT.wasPressed())
             {
-                BlockPos blockPos = blockPosList.get(hud.getSelectIndex());
-                if (client.interactionManager != null && interactCooldown == 0)
+                if (interactCooldown != 0)
+                    continue;
+
+                HudEntry hudEntry = hud.getSelectedEntry();
+                if (hudEntry.obj instanceof BlockPos blockPos)
                 {
                     client.interactionManager.interactBlock(
                             client.player,
                             client.player.getActiveHand(),
-                            new BlockHitResult(blockPos.toCenterPos(), Direction.UP,blockPos,false));
+                            new BlockHitResult(blockPos.toCenterPos(), Direction.NORTH,blockPos,false));
                     client.player.swingHand(client.player.getActiveHand());
                     interactCooldown = 4;
+                }
+                else if (hudEntry.obj instanceof Entity entity)
+                {
+                    client.interactionManager.interactEntity(
+                            client.player,
+                            entity,
+                            client.player.getActiveHand()
+                    );
                 }
             }
 

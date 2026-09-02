@@ -1,0 +1,30 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:chest",
+    "minecraft:ender_chest",
+    "minecraft:stonecutter",
+    "minecraft:crafting_table",
+    "minecraft:beacon",
+    "minecraft:cartography_table",
+    "minecraft:smithing_table",
+    "minecraft:enchanting_table",
+    "minecraft:furnace",
+    "minecraft:blast_furnace",
+    "minecraft:bell",
+    "minecraft:smoker",
+    "minecraft:grindstone",
+    "minecraft:note_block",
+    "minecraft:lever",
+    "#minecraft:shulker_boxes",
+    "#minecraft:anvil",
+    "#minecraft:fence_gates",
+    "#minecraft:beds",
+    "#minecraft:wooden_buttons",
+    "#minecraft:wooden_trapdoors",
+    "#minecraft:wooden_doors",
+    "#minecraft:beds",
+    "#minecraft:all_signs",
+    "#minecraft:all_hanging_signs"
+  ]
+}
