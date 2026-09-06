@@ -51,6 +51,8 @@ public class InteractiveListHud
 
     public HudEntry getSelectedEntry()
     {
+        if (this.selectedIndex < 0 || this.selectedIndex >= this.hudEntries.size())
+            return null;
         return this.hudEntries.get(this.selectedIndex);
     }
 
@@ -75,11 +77,14 @@ public class InteractiveListHud
             this.selectedIndex = 0;
 
         MatrixStack matrixStack = drawContext.getMatrices();
+        int width = client.getWindow().getScaledWidth();
+        int height = client.getWindow().getScaledHeight();
 
         for (int i = 0; i < this.hudEntries.size(); i++)
         {
             matrixStack.push();
-            matrixStack.translate(250.0,130.0,0.0);
+            matrixStack.translate(width * 0.6,height * 0.55,0.0);
+            matrixStack.scale(1.2F,1.2F,1.2F);
 
             if (i > this.maxCellCount - 1)
                 break;

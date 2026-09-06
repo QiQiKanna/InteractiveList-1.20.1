@@ -9,8 +9,12 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.BlockRotation;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
 import java.util.*;
@@ -26,7 +30,7 @@ public class BlockCollector
             new BlockPos(0,-1,0)
     );
 
-    public static List<BlockPos> collectBlocksBFS(MinecraftClient client, float range)
+    public static List<BlockPos> collectBlocksBFS(MinecraftClient client, double range)
     {
         List<BlockPos> result = new ArrayList<>();
 
@@ -83,7 +87,52 @@ public class BlockCollector
 
     public static boolean isInteractiveBlock(BlockState blockState)
     {
-        return blockState.isIn(ModTags.INTERACTIVE_BLOCKS);
+        return blockState.isIn(ModTags.INTERACTIVE_UNCONDITIONAL_BLOCKS);
+    }
+
+    public static BlockHitResult raycast(MinecraftClient client, BlockPos blockPos, double maxDistance)
+    {
+        if (client.world == null || client.player == null)
+            return null;
+
+        Vec3d centerPos = blockPos.toCenterPos();
+        List<Vec3d> samplingPos = List.of(
+                centerPos,
+                centerPos.add(0.0,0.5,0.0),
+                centerPos.add(0.5,0.0,0.0),
+                centerPos.add(-0.5,0.0,0.0),
+                centerPos.add(0.0,0.0,0.5),
+                centerPos.add(0.0,0.0,-0.5),
+                centerPos.add(0.0,-0.5,0.0)
+        );
+
+        //暂且只检测中心
+        for (Vec3d pos : samplingPos)
+        {
+            Vec3d direction = pos.subtract(client.player.getCameraPosVec(client.getTickDelta())).normalize();
+
+            BlockHitResult blockHitResult = client.world.raycast(new RaycastContext(
+                    client.player.getCameraPosVec(client.getTickDelta()),
+                    client.player.getCameraPosVec(client.getTickDelta()).add(direction.multiply(maxDistance)),
+                    RaycastContext.ShapeType.OUTLINE,
+                    RaycastContext.FluidHandling.NONE,
+                    client.player
+            ));
+
+            if (isHIt(blockHitResult, blockPos))
+                return blockHitResult;
+        }
+
+        return null;
+
+    }
+
+    public static boolean isHIt(BlockHitResult hitResult, BlockPos blockPos)
+    {
+        if (hitResult == null || blockPos == null || !hitResult.getType().equals(HitResult.Type.BLOCK))
+            return false;
+
+        return hitResult.getBlockPos().equals(blockPos);
     }
 
     private static void disposeBlock(Set<BlockPos> visited,MinecraftClient client ,BlockPos blockPos)

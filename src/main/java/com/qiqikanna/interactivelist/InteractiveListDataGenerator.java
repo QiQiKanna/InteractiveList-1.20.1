@@ -2,6 +2,7 @@ package com.qiqikanna.interactivelist;
 
 import com.qiqikanna.interactivelist.datagen.ModBlockTagsProvider;
 import com.qiqikanna.interactivelist.datagen.ModEnUSProvider;
+import com.qiqikanna.interactivelist.datagen.ModEntityTypeTagsProvider;
 import com.qiqikanna.interactivelist.datagen.ModZhCNProvider;
 import net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
@@ -15,5 +16,6 @@ public class InteractiveListDataGenerator implements DataGeneratorEntrypoint {
 		pack.addProvider(ModEnUSProvider::new);
 		pack.addProvider(ModZhCNProvider::new);
 		pack.addProvider(ModBlockTagsProvider::new);
+		pack.addProvider(ModEntityTypeTagsProvider::new);
 	}
 }

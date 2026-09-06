@@ -3,15 +3,19 @@ package com.qiqikanna.interactivelist;
 import com.qiqikanna.interactivelist.hud.HudEntry;
 import com.qiqikanna.interactivelist.hud.InteractiveListHud;
 import com.qiqikanna.interactivelist.option.ModKeyBindings;
+import com.qiqikanna.interactivelist.tag.ModTags;
 import com.qiqikanna.interactivelist.util.BlockCollector;
+import com.qiqikanna.interactivelist.util.EntityCollector;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,14 +38,21 @@ public class InteractiveListClient implements ClientModInitializer
                 return;
 
             List<HudEntry> entries = new ArrayList<>();
-            BlockCollector.collectBlocksBFS(client,client.interactionManager.getReachDistance())
-                    .forEach(blockPos ->
-                        entries.add(new HudEntry(client,blockPos))
-                    );
+            BlockCollector.collectBlocksBFS(client,5.0).forEach(
+                    blockPos ->
+                    {
+                        BlockHitResult hitResult = BlockCollector.raycast(client,blockPos,5.0);
+                        if (BlockCollector.isHIt(hitResult,blockPos))
+                            entries.add(new HudEntry(client, blockPos, hitResult));
+                    });
             client.world.getEntities().forEach(entity ->
             {
-                if (entity.distanceTo(client.player) <= client.interactionManager.getReachDistance() && !(entity instanceof PlayerEntity))
-                    entries.add(new HudEntry(client,entity));
+                if (EntityCollector.isInteractive(client,entity))
+                {
+                    HitResult hitResult = EntityCollector.raycast(client,entity);
+                    if (EntityCollector.isHit(hitResult,entity))
+                        entries.add(new HudEntry(client, entity,hitResult));
+                }
             });
             entries.sort((e1,e2)-> (int) (e1.distance - e2.distance));
 
@@ -62,27 +73,31 @@ public class InteractiveListClient implements ClientModInitializer
 
             while (ModKeyBindings.INTERACT.wasPressed())
             {
-                if (interactCooldown != 0)
+                HudEntry hudEntry = hud.getSelectedEntry();
+                if (interactCooldown != 0 || hudEntry == null)
                     continue;
 
-                HudEntry hudEntry = hud.getSelectedEntry();
-                if (hudEntry.obj instanceof BlockPos blockPos)
+                if (hudEntry.obj instanceof BlockPos)
                 {
-                    client.interactionManager.interactBlock(
+                    BlockHitResult hitResult = (BlockHitResult) hudEntry.hitResult;
+                    ActionResult actionResult = client.interactionManager.interactBlock(
                             client.player,
                             client.player.getActiveHand(),
-                            new BlockHitResult(blockPos.toCenterPos(), Direction.NORTH,blockPos,false));
-                    client.player.swingHand(client.player.getActiveHand());
-                    interactCooldown = 4;
+                            hitResult);
+                    if (actionResult.shouldSwingHand())
+                        client.player.swingHand(client.player.getActiveHand());
                 }
                 else if (hudEntry.obj instanceof Entity entity)
                 {
-                    client.interactionManager.interactEntity(
+                    ActionResult actionResult = client.interactionManager.interactEntity(
                             client.player,
                             entity,
-                            client.player.getActiveHand()
-                    );
+                            client.player.getActiveHand());
+                    if (actionResult.shouldSwingHand())
+                        client.player.swingHand(client.player.getActiveHand());
                 }
+
+                interactCooldown = 4;
             }
 
         });
