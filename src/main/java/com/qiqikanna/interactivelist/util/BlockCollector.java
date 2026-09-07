@@ -49,7 +49,7 @@ public class BlockCollector
         blockPosList.forEach(blockPos ->
         {
             BlockHitResult hitResult = raycast(client,blockPos,range);
-            if (isHIt(hitResult,blockPos))
+            if (isHit(hitResult,blockPos))
                 entries.add(new HudEntry(client,blockPos,hitResult));
         });
         return entries;
@@ -135,7 +135,7 @@ public class BlockCollector
                     client.player
             ));
 
-            if (isHIt(blockHitResult, blockPos))
+            if (isHit(blockHitResult, blockPos))
                 return blockHitResult;
         }
 
@@ -143,7 +143,7 @@ public class BlockCollector
 
     }
 
-    public static boolean isHIt(BlockHitResult hitResult, BlockPos blockPos)
+    public static boolean isHit(BlockHitResult hitResult, BlockPos blockPos)
     {
         if (hitResult == null || blockPos == null || !hitResult.getType().equals(HitResult.Type.BLOCK))
             return false;

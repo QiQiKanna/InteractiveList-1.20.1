@@ -22,10 +22,7 @@ public class InteractiveList implements ModInitializer {
 		// However, some things (like resources) may still be uninitialized.
 		// Proceed with mild caution.
 
-		LOGGER.info("Hello Fabric world!");
-		String key = Blocks.STONE.getTranslationKey();
-		LOGGER.info(key);
-		LOGGER.info(Text.translatable(key + "interactive_list_content").getString());
+		LOGGER.info("交互列表模组正在加载");
 	}
 
 	public static Identifier id(String path) {

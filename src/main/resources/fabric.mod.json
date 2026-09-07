@@ -8,8 +8,8 @@
 		"QiQiKanna"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://github.com/QiQiKanna/InteractiveList-1.20.1",
+		"sources": "https://github.com/QiQiKanna/InteractiveList-1.20.1"
 	},
 	"license": "MIT",
 	"icon": "assets/interactive-list/icon.png",
