@@ -1,5 +1,6 @@
 package com.qiqikanna.interactivelist.util;
 
+import com.qiqikanna.interactivelist.hud.HudEntry;
 import com.qiqikanna.interactivelist.tag.ModTags;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
@@ -9,8 +10,30 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class EntityCollector
 {
+    public static List<HudEntry> getHudEntries(MinecraftClient client,double range)
+    {
+        List<HudEntry> entries = new ArrayList<>();
+        if (client.world == null)
+            return entries;
+
+        client.world.getEntities().forEach(entity ->
+        {
+            if (EntityCollector.isInteractive(client,entity,range))
+            {
+                HitResult hitResult = raycast(client,entity);
+                if (isHit(hitResult,entity))
+                    entries.add(new HudEntry(client, entity,hitResult));
+            }
+        });
+
+        return entries;
+    }
+
     public static HitResult raycast(MinecraftClient client, Entity entity)
     {
         if (client.world == null || client.player == null)
@@ -19,7 +42,7 @@ public class EntityCollector
         return client.world.raycast(new RaycastContext(
                 client.player.getCameraPosVec(client.getTickDelta()),
                 entity.getBoundingBox().getCenter(),
-                RaycastContext.ShapeType.OUTLINE,
+                RaycastContext.ShapeType.COLLIDER,
                 RaycastContext.FluidHandling.NONE,
                 client.player
         ));
@@ -32,17 +55,17 @@ public class EntityCollector
 
         Box box = entity.getBoundingBox();
         Vec3d pos = hitResult.getPos();
-        boolean inRangeX = pos.x < box.maxX + 0.1 && pos.x > box.minX - 0.1;
-        boolean inRangeY = pos.y < box.maxY + 0.1 && pos.y > box.minY - 0.1;
-        boolean inRangeZ = pos.z < box.maxZ + 0.1 && pos.z > box.minZ - 0.1;
+        boolean inRangeX = pos.x <= box.maxX && pos.x >= box.minX;
+        boolean inRangeY = pos.y <= box.maxY && pos.y >= box.minY;
+        boolean inRangeZ = pos.z <= box.maxZ && pos.z >= box.minZ;
         return inRangeX && inRangeY && inRangeZ;
     }
 
-    public static boolean isInteractive(MinecraftClient client, Entity entity)
+    public static boolean isInteractive(MinecraftClient client, Entity entity,double maxDistance)
     {
         if (client.world == null || client.player == null || entity == null)
             return false;
-        if (client.player.distanceTo(entity) > 5.0)
+        if (client.player.distanceTo(entity) > maxDistance)
             return false;
 
         EntityType<?> entityType = entity.getType();

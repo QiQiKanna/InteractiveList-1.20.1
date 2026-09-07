@@ -1,5 +1,6 @@
 package com.qiqikanna.interactivelist.util;
 
+import com.qiqikanna.interactivelist.hud.HudEntry;
 import com.qiqikanna.interactivelist.tag.ModTags;
 import net.minecraft.block.*;
 import net.minecraft.block.enums.BedPart;
@@ -7,6 +8,7 @@ import net.minecraft.block.enums.ChestType;
 import net.minecraft.block.enums.DoubleBlockHalf;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.fluid.FluidState;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.hit.BlockHitResult;
@@ -21,7 +23,7 @@ import java.util.*;
 
 public class BlockCollector
 {
-    private static final List<BlockPos> OFFSETS = List.of(
+    private static final List<BlockPos> BFS_OFFSETS = List.of(
             new BlockPos(1,0,0),
             new BlockPos(-1,0,0),
             new BlockPos(0,0,1),
@@ -30,7 +32,30 @@ public class BlockCollector
             new BlockPos(0,-1,0)
     );
 
-    public static List<BlockPos> collectBlocksBFS(MinecraftClient client, double range)
+    private static final List<Vec3d> RAYCAST_OFFSETS = List.of(
+            new Vec3d(0.0,0.0,0.0),
+            new Vec3d(0.0,0.5,0.0),
+            new Vec3d(0.5,0.0,0.0),
+            new Vec3d(-0.5,0.0,0.0),
+            new Vec3d(0.0,0.0,0.5),
+            new Vec3d(0.0,0.0,-0.5),
+            new Vec3d(0.0,-0.5,0.0)
+    );
+
+    public static List<HudEntry> getHudEntries(MinecraftClient client, double range)
+    {
+        List<HudEntry> entries = new ArrayList<>();
+        List<BlockPos> blockPosList = collectBlockPosBFS(client,range + 2.0);
+        blockPosList.forEach(blockPos ->
+        {
+            BlockHitResult hitResult = raycast(client,blockPos,range);
+            if (isHIt(hitResult,blockPos))
+                entries.add(new HudEntry(client,blockPos,hitResult));
+        });
+        return entries;
+    }
+
+    public static List<BlockPos> collectBlockPosBFS(MinecraftClient client, double range)
     {
         List<BlockPos> result = new ArrayList<>();
 
@@ -55,7 +80,7 @@ public class BlockCollector
                 result.add(new BlockPos(currentPos));
             }
 
-            for (BlockPos offset : OFFSETS)
+            for (BlockPos offset : BFS_OFFSETS)
             {
                 cursor.set(currentPos.getX() + offset.getX(),
                         currentPos.getY() + offset.getY(),
@@ -96,19 +121,10 @@ public class BlockCollector
             return null;
 
         Vec3d centerPos = blockPos.toCenterPos();
-        List<Vec3d> samplingPos = List.of(
-                centerPos,
-                centerPos.add(0.0,0.5,0.0),
-                centerPos.add(0.5,0.0,0.0),
-                centerPos.add(-0.5,0.0,0.0),
-                centerPos.add(0.0,0.0,0.5),
-                centerPos.add(0.0,0.0,-0.5),
-                centerPos.add(0.0,-0.5,0.0)
-        );
 
-        //暂且只检测中心
-        for (Vec3d pos : samplingPos)
+        for (Vec3d offset : RAYCAST_OFFSETS)
         {
+            Vec3d pos = centerPos.add(offset);
             Vec3d direction = pos.subtract(client.player.getCameraPosVec(client.getTickDelta())).normalize();
 
             BlockHitResult blockHitResult = client.world.raycast(new RaycastContext(
@@ -135,24 +151,30 @@ public class BlockCollector
         return hitResult.getBlockPos().equals(blockPos);
     }
 
-    private static void disposeBlock(Set<BlockPos> visited,MinecraftClient client ,BlockPos blockPos)
-    {
-        disposeChest(visited,client,blockPos);
-        disposeBed(visited,client,blockPos);
-        disposeDoor(visited,client,blockPos);
-    }
-
-    private static void disposeChest(Set<BlockPos> visited,MinecraftClient client ,BlockPos blockPos)
+    public static void disposeBlock(Set<BlockPos> visited,MinecraftClient client ,BlockPos blockPos)
     {
         if (client.world == null)
             return;
-        BlockState blockState = client.world.getBlockState(blockPos);
-        if (!(blockState.getBlock() instanceof ChestBlock))
-            return;
 
+        BlockState blockState = client.world.getBlockState(blockPos);
+        BlockPos neighborBlockPos = null;
+
+        if (blockState.isOf(Blocks.CHEST))
+            neighborBlockPos = getNeighborChestPos(blockState,blockPos);
+        else if (blockState.isIn(BlockTags.BEDS))
+            neighborBlockPos = getNeighborBedPos(blockState,blockPos);
+        else if (blockState.isIn(BlockTags.DOORS))
+            neighborBlockPos = getNeighborDoorPos(blockState,blockPos);
+
+        if (neighborBlockPos != null && client.world.getBlockState(blockPos).isOf(blockState.getBlock()))
+            visited.add(neighborBlockPos);
+    }
+
+    public static BlockPos getNeighborChestPos(BlockState blockState , BlockPos blockPos)
+    {
         ChestType type = blockState.get(ChestBlock.CHEST_TYPE);
         Direction facing = blockState.get(ChestBlock.FACING);
-        BlockPos neighborPos;
+        BlockPos neighborPos = null;
         if (type.equals(ChestType.LEFT))
         {
             neighborPos = blockPos.offset(BlockRotation.CLOCKWISE_90.rotate(facing));
@@ -161,43 +183,22 @@ public class BlockCollector
         {
             neighborPos = blockPos.offset(BlockRotation.COUNTERCLOCKWISE_90.rotate(facing));
         }
-        else
-        {
-            return;
-        }
 
-        if (client.world.getBlockState(neighborPos).getBlock() instanceof ChestBlock)
-            visited.add(new BlockPos(neighborPos));
+        return neighborPos;
     }
 
-    private static void disposeBed(Set<BlockPos> visited,MinecraftClient client ,BlockPos blockPos)
+    public static BlockPos getNeighborBedPos(BlockState blockState , BlockPos blockPos)
     {
-        if (client.world == null)
-            return;
-        BlockState blockState = client.world.getBlockState(blockPos);
-        if (!(blockState.getBlock() instanceof BedBlock))
-            return;
-
         BedPart part = blockState.get(BedBlock.PART);
         Direction facing = blockState.get(BedBlock.FACING);
 
-        BlockPos neighborPos = part == BedPart.FOOT ? blockPos.offset(facing) : blockPos.offset(facing.getOpposite());
-        if (client.world.getBlockState(neighborPos).isOf(blockState.getBlock()))
-            visited.add(new BlockPos(neighborPos));
+        return (part == BedPart.FOOT) ? blockPos.offset(facing) : blockPos.offset(facing.getOpposite());
     }
 
-    private static void disposeDoor(Set<BlockPos> visited,MinecraftClient client ,BlockPos blockPos)
+    public static BlockPos getNeighborDoorPos(BlockState blockState ,BlockPos blockPos)
     {
-        if (client.world == null)
-            return;
-        BlockState blockState = client.world.getBlockState(blockPos);
-        if (!(blockState.getBlock() instanceof DoorBlock))
-            return;
-
         DoubleBlockHalf half = blockState.get(DoorBlock.HALF);
 
-        BlockPos neighborPos = half == DoubleBlockHalf.LOWER ? blockPos.offset(Direction.UP) : blockPos.offset(Direction.DOWN);
-        if (client.world.getBlockState(neighborPos).isOf(blockState.getBlock()))
-            visited.add(new BlockPos(neighborPos));
+        return (half == DoubleBlockHalf.LOWER) ? blockPos.offset(Direction.UP) : blockPos.offset(Direction.DOWN);
     }
 }

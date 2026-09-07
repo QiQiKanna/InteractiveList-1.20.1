@@ -3,22 +3,19 @@ package com.qiqikanna.interactivelist;
 import com.qiqikanna.interactivelist.hud.HudEntry;
 import com.qiqikanna.interactivelist.hud.InteractiveListHud;
 import com.qiqikanna.interactivelist.option.ModKeyBindings;
-import com.qiqikanna.interactivelist.tag.ModTags;
 import com.qiqikanna.interactivelist.util.BlockCollector;
 import com.qiqikanna.interactivelist.util.EntityCollector;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class InteractiveListClient implements ClientModInitializer
 {
@@ -37,27 +34,15 @@ public class InteractiveListClient implements ClientModInitializer
             if (client.player == null || client.world == null || client.interactionManager == null)
                 return;
 
-            List<HudEntry> entries = new ArrayList<>();
-            BlockCollector.collectBlocksBFS(client,5.0).forEach(
-                    blockPos ->
-                    {
-                        BlockHitResult hitResult = BlockCollector.raycast(client,blockPos,5.0);
-                        if (BlockCollector.isHIt(hitResult,blockPos))
-                            entries.add(new HudEntry(client, blockPos, hitResult));
-                    });
-            client.world.getEntities().forEach(entity ->
-            {
-                if (EntityCollector.isInteractive(client,entity))
-                {
-                    HitResult hitResult = EntityCollector.raycast(client,entity);
-                    if (EntityCollector.isHit(hitResult,entity))
-                        entries.add(new HudEntry(client, entity,hitResult));
-                }
-            });
-            entries.sort((e1,e2)-> (int) (e1.distance - e2.distance));
-
             InteractiveListHud hud = InteractiveListHud.getInstance();
             hud.setClient(client);
+
+            List<HudEntry> entries =
+                    Stream.concat(BlockCollector.getHudEntries(client, hud.getRange()).stream(),
+                                    EntityCollector.getHudEntries(client, hud.getRange()).stream())
+                    .sorted((e1, e2) -> (int) (e1.distance - e2.distance))
+                    .collect(Collectors.toList());
+
             hud.setHudEntries(entries);
 
 

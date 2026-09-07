@@ -18,11 +18,13 @@ public class InteractiveListHud
     private MinecraftClient client;
     private final List<HudEntry> hudEntries = new ArrayList<>();
     private int maxCellCount;
+    private double range;
     private int selectedIndex = 0;
 
     private InteractiveListHud()
     {
         this.maxCellCount = 4;
+        this.range = 5.0;
     }
 
     public static InteractiveListHud getInstance()
@@ -47,6 +49,11 @@ public class InteractiveListHud
 
             this.hudEntries.add(hudEntries.get(i));
         }
+    }
+
+    public double getRange()
+    {
+        return this.range;
     }
 
     public HudEntry getSelectedEntry()
